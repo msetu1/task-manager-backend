@@ -3,6 +3,9 @@ import { Application, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import bodyParser from 'body-parser';
+import globalErrorHandler from './middlewares/error.middleware';
+import notFound from './middlewares/errors/notFound';
+import { UserRoutes } from './routes/user.route';
 
 const app: Application = express();
 
@@ -18,6 +21,7 @@ app.use(
 app.use(bodyParser.json());
 
 // application route
+app.use('/api/user', UserRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send({
@@ -27,5 +31,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Error handlers
+app.use(globalErrorHandler);
+app.use(notFound);
 
 export default app;
