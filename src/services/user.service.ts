@@ -1,9 +1,6 @@
 import httpStatusCodes from 'http-status-codes';
-import {
-  IResetPassword,
-  IUserLogin,
-  IUserRegister,
-} from '../interface/user.interface';
+import crypto from 'crypto';
+import { IUserLogin, IUserRegister } from '../interface/user.interface';
 import { User } from '../models/user.model';
 import jwt from 'jsonwebtoken';
 import AppError from '../middlewares/errors/AppError';
@@ -60,26 +57,66 @@ const allUser = async () => {
   const result = await User.find();
   return result;
 };
-// Reset Password
-const resetPassword = async (payload: IResetPassword) => {
-  const { email, newPassword, confirmPassword } = payload;
 
-  if (newPassword !== confirmPassword) {
-    throw new AppError(httpStatusCodes.BAD_REQUEST, 'Passwords do not match');
-  }
-
-  const user = await User.findOne({ email }).select('+password');
-
+// forget password
+const forgetPassword = async (email: string) => {
+  const user = await User.findOne({ email });
   if (!user) {
     throw new AppError(httpStatusCodes.NOT_FOUND, 'User not found');
   }
 
+  // Generate Token
+  const resetToken = crypto.randomBytes(20).toString('hex');
+  const resetTokenHashed = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  user.resetPasswordToken = resetTokenHashed;
+  user.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000);
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+
+  return {
+    message: 'Reset password link sent!',
+    resetUrl,
+  };
+};
+
+// Reset Password
+const resetPasswordWithToken = async (
+  token: string,
+  newPassword: string,
+  confirmPassword: string,
+) => {
+  if (newPassword !== confirmPassword) {
+    throw new AppError(httpStatusCodes.BAD_REQUEST, 'Passwords do not match');
+  }
+
+  const resetTokenHashed = crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken: resetTokenHashed,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatusCodes.BAD_REQUEST, 'Invalid or expired token');
+  }
+
+  // Update password
   user.password = newPassword;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+
   await user.save();
 
   return {
-    message: 'Password reset successful!',
-    email: user.email,
+    message: 'Password reset successful',
   };
 };
 
@@ -88,5 +125,6 @@ export const UserService = {
   loginUser,
   registerUser,
   allUser,
-  resetPassword,
+  resetPasswordWithToken,
+  forgetPassword,
 };

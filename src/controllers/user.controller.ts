@@ -2,7 +2,7 @@ import { UserService } from '../services/user.service';
 import catchAsync from '../utils/catchAsync';
 import sendResponse from '../utils/sendResponse';
 import httpStatusCodes from 'http-status-codes';
-import { resetPasswordSchema, UserValidator } from '../utils/user.validator';
+import { UserValidator } from '../utils/user.validator';
 
 const loginUser = catchAsync(async (req, res) => {
   const result = await UserService.loginUser(req.body);
@@ -41,15 +41,32 @@ const allUser = catchAsync(async (req, res) => {
     data: result,
   });
 });
-const resetPassword = catchAsync(async (req, res) => {
-  const validatedData = resetPasswordSchema.parse(req.body);
 
-  const result = await UserService.resetPassword(validatedData);
+export const forgetPassword = catchAsync(async (req, res) => {
+  const { email } = req.body;
+  const result = await UserService.forgetPassword(email);
   sendResponse(res, {
     statusCode: httpStatusCodes.OK,
     success: true,
-    message: 'Password reset successfully !',
-    data: result,
+    message: result.message,
+    data: { resetUrl: result.resetUrl },
+  });
+});
+
+export const resetPasswordWithToken = catchAsync(async (req, res) => {
+  const { token } = req.params;
+  const { newPassword, confirmPassword } = req.body;
+
+  const result = await UserService.resetPasswordWithToken(
+    token,
+    newPassword,
+    confirmPassword,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatusCodes.OK,
+    success: true,
+    message: result.message,
   });
 });
 
@@ -57,5 +74,6 @@ export const UserController = {
   loginUser,
   registerUser,
   allUser,
-  resetPassword,
+  forgetPassword,
+  resetPasswordWithToken,
 };

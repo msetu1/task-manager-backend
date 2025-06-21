@@ -12,6 +12,9 @@ export interface IUserRegister {
   email: string;
   password: string;
   imageUrl?: string;
+  // For forget/reset password
+  resetPasswordToken?: string;
+  resetPasswordExpire?: Date;
 }
 
 // reset Password
