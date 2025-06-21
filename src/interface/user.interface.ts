@@ -1,3 +1,5 @@
+import { Model } from 'mongoose';
+
 // user login
 export interface IUserLogin {
   email: string;
@@ -12,17 +14,17 @@ export interface IUserRegister {
   imageUrl?: string;
 }
 
+// reset Password
 export interface IResetPassword {
   email: string;
   newPassword: string;
   confirmPassword: string;
 }
 
-// export interface IResetPasswordInput {
-//   email: string;
-// }
-
-// export interface ISetNewPasswordInput {
-//   newPassword: string;
-//   confirmPassword: string;
-// }
+export interface IUserRegisterModel extends Model<IUserRegister> {
+  isUserExistsEmail(email: string): Promise<IUserRegister | null>;
+  isPasswordMatched(
+    plainTextPassword: string,
+    hashedPassword: string,
+  ): Promise<boolean>;
+}
